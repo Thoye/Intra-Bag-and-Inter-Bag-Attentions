@@ -18,7 +18,7 @@ class Model(nn.Module):
         self.kernel_size = kernel_size
         self.word_size = word_size
         self.feature_size = feature_size
-        self.num_classes = num_classes
+        self.num_classes = num_classes  # 53 relations
         self.name = name
 
         self.embeddings = getEmbeddings(self.word_size, self.word_length, self.feature_size,
@@ -55,8 +55,8 @@ class Model(nn.Module):
         batch_e = self.R_CNN(batch_sent_emb)
         batch_p = []
         for i in range(len(total_shape) - 1):
-            beg, end = total_shape[i], total_shape[i + 1]
-            weight_e = batch_e[beg: end, y_batch[i].cpu().data[0]]
+            beg, end = total_shape[i], total_shape[i + 1]  # beg:begin
+            weight_e = batch_e[beg: end, y_batch[i].cpu().data[0]]  # batch_e:batch_embedding->beg to end
             sent_emb = batch_sent_emb[beg: end]
             alpha = nn.functional.softmax(weight_e, 0)
             s = torch.matmul(alpha, sent_emb)
@@ -73,16 +73,16 @@ class Model(nn.Module):
         cnn = cnn.squeeze(2)
         batch_sent_emb = self.dropout(cnn)
         batch_sent_emb = nn.functional.tanh(batch_sent_emb)
-        batch_e = self.R_CNN(batch_sent_emb)
+        batch_e = self.R_CNN(batch_sent_emb)  # R_CNN 全连接层, batch_e求一个batch的匹配度
         batch_score = []
         for i in range(len(total_shape) - 1):
             beg, end = total_shape[i], total_shape[i + 1]
-            weight_e = batch_e[beg: end]
+            weight_e = batch_e[beg: end]  # weight_e: 当前bag内的匹配度
             sent_emb = batch_sent_emb[beg: end]
-            alpha = nn.functional.softmax(weight_e.transpose(0, 1), 1)
-            bag_rep = torch.matmul(alpha, sent_emb)
-            o = self.R_CNN(self.dropout(bag_rep))
-            batch_score.append(o.diag())
+            alpha = nn.functional.softmax(weight_e.transpose(0, 1), 1)  # alpha == intra attention weight
+            bag_rep = torch.matmul(alpha, sent_emb)  # bag_rep == bag representation
+            o = self.R_CNN(self.dropout(bag_rep))  # o: bag score
+            batch_score.append(o.diag())  # batch_score: bag group score
         batch_score = torch.stack(batch_score)
         loss = nn.functional.cross_entropy(batch_score, y_batch)
         return loss
@@ -139,23 +139,23 @@ class Model(nn.Module):
             sent_emb = batch_sent_emb[beg: end]
             alpha = nn.functional.softmax(weight_e.transpose(0, 1), 1)
             bag_rep = torch.matmul(alpha, sent_emb)
-            bag_reps.append(bag_rep)
+            bag_reps.append(bag_rep)  # 全部bag的 bag representation
 
         bag_reps = torch.stack(bag_reps).view(batch[1],batch[0],self.num_classes,self.cnn_layers)
         losses = []
-        for i, (bag_rep, y) in enumerate(zip(torch.unbind(bag_reps, 0), torch.unbind(y_batch, 0))):
+        for i, (bag_rep, y) in enumerate(zip(torch.unbind(bag_reps, 0), torch.unbind(y_batch, 0))):  # zip依次取出对应元素
             if y.data[0] == 0:
-                score = torch.sum(self.R_CNN(self.dropout(bag_rep)) * self.diag, 2)
+                score = torch.sum(self.R_CNN(self.dropout(bag_rep)) * self.diag, 2)  # diag: 53 relations
                 loss = nn.functional.cross_entropy(score, y)
                 losses.append(loss)
             else:
                 bag_rep = bag_rep.transpose(0,1)
                 bag_rep = bag_rep / torch.norm(bag_rep, 2, 2, keepdim=True)
-                crossatt = torch.matmul(bag_rep, bag_rep.transpose(1,2))
+                crossatt = torch.matmul(bag_rep, bag_rep.transpose(1,2))  # inter attention
                 crossatt = torch.sum(crossatt, 2)
-                crossatt = F.softmax(crossatt, 1)
-                weighted_bags_rep = torch.matmul(crossatt.unsqueeze(1), bag_rep).squeeze(1)
-                score = self.R_CNN(self.dropout(weighted_bags_rep)).diag().unsqueeze(0)
+                crossatt = F.softmax(crossatt, 1)  # inter attention weight
+                weighted_bags_rep = torch.matmul(crossatt.unsqueeze(1), bag_rep).squeeze(1)  # group representation
+                score = self.R_CNN(self.dropout(weighted_bags_rep)).diag().unsqueeze(0)  # group score
                 loss = nn.functional.cross_entropy(score, y[0])
                 losses.append(loss)
         losses = torch.stack(losses).mean()
