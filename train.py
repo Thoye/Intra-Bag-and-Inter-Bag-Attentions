@@ -15,17 +15,17 @@ from preprocess.data2pkl import DocumentContainer
 from model.model_bagatt import Model
 
 
-
 def bags_decompose(data_bags):
     bag_sent = [data_bag.sentences for data_bag in data_bags]
     bag_label = [data_bag.label for data_bag in data_bags]
-    bag_pos = [data_bag.pos for data_bag in data_bags]
+    bag_pos = [data_bag.pos for data_bag in data_bags]  # pos: position
     bag_ldist = [data_bag.l_dist for data_bag in data_bags]
     bag_rdist = [data_bag.r_dist for data_bag in data_bags]
     bag_entity = [data_bag.entity_pair for data_bag in data_bags]
-    bag_epos = [data_bag.entity_pos for data_bag in data_bags]
+    bag_epos = [data_bag.entity_pos for data_bag in data_bags]  # epos: entity position
     bag_sentlen = [data_bag.sentlens for data_bag in data_bags]
     return [bag_label, bag_sent, bag_pos, bag_ldist, bag_rdist, bag_entity, bag_epos, bag_sentlen]
+
 
 def groups_decompose(data_bags):
     bag_label, bag_sent, bag_pos, bag_ldist, bag_rdist, bag_entity, bag_epos, bag_sentlen = [], [], [], [], [], [], [], []
@@ -42,6 +42,7 @@ def groups_decompose(data_bags):
 
     return [bag_label, bag_sent, bag_pos, bag_ldist, bag_rdist, bag_entity, bag_epos, bag_sentlen]
 
+
 def group_decompose(data_bags):
 
     bag_label = [[data_bag.label for data_bag in data] for data in data_bags]
@@ -54,6 +55,7 @@ def group_decompose(data_bags):
     bag_sentlen = [[data_bag.sentlens for data_bag in data] for data in data_bags]
 
     return [bag_label, bag_sent, bag_pos, bag_ldist, bag_rdist, bag_entity, bag_epos, bag_sentlen]
+
 
 def curve(y_scores, y_true, num=2000):
     order = np.argsort(y_scores)[::-1]
@@ -72,6 +74,7 @@ def curve(y_scores, y_true, num=2000):
         precisions.append(precision)
         recalls.append(recall)
     return np.array(recalls), np.array(precisions)
+
 
 def eval(model, testset, args):
 
@@ -143,6 +146,7 @@ def eval(model, testset, args):
     y_scores = np.concatenate(y_scores).reshape(-1)
 
     return y_true, y_scores
+
 
 def AUC_and_PN(model, datasets, args):
 
