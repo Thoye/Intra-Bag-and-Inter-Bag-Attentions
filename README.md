@@ -4,7 +4,7 @@
 
 To run our code, the dataset should be put in the folder data/ using the following format, containing these files
 
-    train.txt: training file, format (fb_mid_e1, fb_mid_e2, e1_name, e2_name, relation, sentence).
+    train.txt: training file, format (id_e1, id_e2, e1_name, e2_name, relation, sentence).
 
     test.txt: test file, same format as train.txt.
 
