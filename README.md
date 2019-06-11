@@ -1,5 +1,17 @@
 # Intra-Bag and Inter-Bag Attentions
 
+## Data
+
+To run our code, the dataset should be put in the folder data/ using the following format, containing these files
+
+    train.txt: training file, format (fb_mid_e1, fb_mid_e2, e1_name, e2_name, relation, sentence).
+
+    test.txt: test file, same format as train.txt.
+
+    relation2id.txt: all relations and corresponding ids, one per line.
+
+    vec.bin: the pre-train word embedding file
+    
 
 ## Dependencies
 
@@ -74,6 +86,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py --pretrain --use_RA --sent_encoding pcnn 
 ```
 python plot.py --model_name PCNN_ATTRA_BAGATT
 ```
+
 
 
 ## Cite
