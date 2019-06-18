@@ -70,7 +70,7 @@ map<string,vector<int> > bags_train, bags_test;
 
 void init() {
 
-	FILE *f = fopen("../NYT_data/vec.bin", "rb");
+	FILE *f = fopen("../NYT_data/vec_300d.txt", "r");
 	fscanf(f, "%lld", &wordTotal);
 	fscanf(f, "%lld", &dimension);
 	cout<<"wordTotal=\t"<<wordTotal<<endl;
@@ -83,10 +83,14 @@ void init() {
 	wordVec = (float *)malloc((wordTotal+1) * dimension * sizeof(float));
 	wordList.resize(wordTotal+1);
 	wordList[0] = "UNK";
+	char buffer[1000];
 	for (int b = 1; b <= wordTotal; b++)
 	{
 		string name = "";
-		while (1) {
+		fscanf(f,"%s",buffer);
+		name = buffer;
+//		if(b<100) cout<<b<<"-----"<<name<<endl;
+		while (fscanf(f,"%s",buffer)==1) {
 			char ch = fgetc(f);
 			if (feof(f) || ch == ' ') break;
 			if (ch != '\n') name = name + ch;
@@ -94,7 +98,12 @@ void init() {
 		long long last = b * dimension;
 		float smp = 0;
 		for (int a = 0; a < dimension; a++) {
-			fread(&wordVec[a + last], sizeof(float), 1, f);
+		    fscanf(f,"%s",buffer);
+		    double nn;
+		    nn = atof(buffer);  //将字符串转为double类型
+		    wordVec[a+last] =nn;
+//		    cout<<a<<"-----"<<wordVec[a+last]<<endl;
+//			fread(&wordVec[a + last], sizeof(float), 1, f);
 			smp += wordVec[a + last]*wordVec[a + last];
 		}
 		smp = sqrt(smp);
@@ -111,12 +120,13 @@ void init() {
 	for (int i = 0; i < wordTotal; i++)
 	{
 		fout << wordList[i]<<"\t";
+		fout <<"\n";
 		for (int j=0; j<dimension; j++)
 			fout << wordVec[i*dimension+j]<<",";
 		fout <<"\n";
 	}
 	fout.close();
-	char buffer[1000];
+
 	f = fopen("../NYT_data/relation2id.txt", "r");
 	while (fscanf(f,"%s",buffer)==1)
 	{
@@ -129,7 +139,7 @@ void init() {
 	fclose(f);
 	cout<<"relationTotal:\t"<<relationTotal<<endl;
 
-    f = fopen("../NYT_data/train.txt", "r");
+    f = fopen("../NYT_data/computer_train.txt", "r");
     while (fscanf(f,"%s",buffer)==1)
     {
         string e1 = buffer;
@@ -183,7 +193,7 @@ void init() {
     }
     fclose(f);
 
-    f = fopen("../NYT_data/test.txt", "r");
+    f = fopen("../NYT_data/computer_train.txt", "r");
     while (fscanf(f,"%s",buffer)==1)  {
         string e1 = buffer;
         fscanf(f,"%s",buffer);
