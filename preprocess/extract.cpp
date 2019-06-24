@@ -63,16 +63,19 @@ vector<int> headList, tailList, relationList, ldist, rdist, testldist, testrdist
 vector<int *> testtrainLists, testPositionE1, testPositionE2;
 vector<int> testtrainLength;
 vector<int> testheadList, testtailList, testrelationList;
-vector<string> testheadLists, testtailLists, testrelationLists;
+vector<string> headLists, tailLists, testheadLists, testtailLists, testrelationLists;
 vector<std::string> nam;
 
 map<string,vector<int> > bags_train, bags_test;
 
 void init() {
 
-	FILE *f = fopen("../NYT_data/vec_300d.txt", "r");
+	FILE *f = fopen("../NYT_data/vec_50d.txt", "r");
+	FILE *fp = fopen("../NYT_data/vec_50d.txt", "r");
 	fscanf(f, "%lld", &wordTotal);
 	fscanf(f, "%lld", &dimension);
+	fscanf(fp, "%lld", &wordTotal);
+	fscanf(fp, "%lld", &dimension);
 	cout<<"wordTotal=\t"<<wordTotal<<endl;
 	cout<<"Word dimension=\t"<<dimension<<endl;
 
@@ -84,43 +87,59 @@ void init() {
 	wordList.resize(wordTotal+1);
 	wordList[0] = "UNK";
 	char buffer[1000];
-	for (int b = 1; b <= wordTotal; b++)
+	for (int b = 1; b < wordTotal; b++)  //b 只是个数, 一个词一个词地输出词向量
 	{
 		string name = "";
-		fscanf(f,"%s",buffer);
+//		fscanf(f,"%s%*[^]",buffer);  //产生wordVec
+		fscanf(f,"%s%*[^\n]",buffer);  //产生name, 读取第一个单词并忽略其余部分，而不是忽略该行并读取第一个单词
 		name = buffer;
-//		if(b<100) cout<<b<<"-----"<<name<<endl;
-		while (fscanf(f,"%s",buffer)==1) {
-			char ch = fgetc(f);
-			if (feof(f) || ch == ' ') break;
-			if (ch != '\n') name = name + ch;
-		}
-		long long last = b * dimension;
+//        if(b<10) cout<<b<<"-----"<<name<<endl;
+        wordList[b] = name;  // name
+//        if(b<10) cout<<b<<"-----"<<wordList[b]<<endl;
+		wordMapping[name] = b;  // id
+//		if(b<10) cout<<b<<"-----"<<wordMapping[name]<<endl;
+
+//        char ch = fgetc(f);
+//        while (ch != '\n') ch++;
+//        if (ch == '\n') continue;
+//        while (fscanf(f, "%s", buffer) != EOF) {
+//            printf("%s\n",buffer);
+//        }
+    }
+
+    for (int b = 1; b < wordTotal; b++)  //b 只是个数, 一个词一个词地输出词向量
+	{
+		fscanf(fp,"%s%*[^]",buffer);  //产生wordVec
+		long long last = b * dimension; //　从开始到当前的维度
 		float smp = 0;
-		for (int a = 0; a < dimension; a++) {
-		    fscanf(f,"%s",buffer);
+
+        for (int a = 0; a < dimension; a++) {
+
+		    fscanf(fp,"%s",buffer);
 		    double nn;
 		    nn = atof(buffer);  //将字符串转为double类型
 		    wordVec[a+last] =nn;
-//		    cout<<a<<"-----"<<wordVec[a+last]<<endl;
-//			fread(&wordVec[a + last], sizeof(float), 1, f);
+//		    if(b<10) cout<<b<<"-----"<<wordVec[a+last]<<endl;
+			fread(&wordVec[a + last], sizeof(float), 1, fp);
 			smp += wordVec[a + last]*wordVec[a + last];
 		}
 		smp = sqrt(smp);
-		for (int a = 0; a< dimension; a++)
-			wordVec[a+last] = wordVec[a+last] / smp;
-		wordMapping[name] = b;
-		wordList[b] = name;
+//		if(b<3) cout<<b<<"-----"<<smp<<endl;
+		for (int a = 0; a< dimension; a++) {
+			wordVec[a+last] = wordVec[a+last] / smp; //跟之前相比是再做一次处理
+//			if(b<5) cout<<b<<"-----"<<wordVec[a+last]<<endl;
+		}
+
 	}
 	wordTotal+=1;
 	fclose(f);
+
 
 	ofstream fout;
   	fout.open("word2vec.txt",ios::out);
 	for (int i = 0; i < wordTotal; i++)
 	{
-		fout << wordList[i]<<"\t";
-		fout <<"\n";
+		fout << wordList[i]<<"\t"; // wordList[i] = name
 		for (int j=0; j<dimension; j++)
 			fout << wordVec[i*dimension+j]<<",";
 		fout <<"\n";
@@ -146,19 +165,19 @@ void init() {
         fscanf(f,"%s",buffer);
         string e2 = buffer;
         fscanf(f,"%s",buffer);
+        bags_train[e1+"\t"+e2+"\t"+(string)(buffer)].push_back(headLists.size());//改
         string head_s = (string)(buffer);
         int head = wordMapping[(string)(buffer)];
         fscanf(f,"%s",buffer);
-        int tail = wordMapping[(string)(buffer)];
+        int tail = wordMapping[(string)(buffer)];//更换顺序
         string tail_s = (string)(buffer);
         fscanf(f,"%s",buffer);
-        bags_train[e1+"\t"+e2+"\t"+(string)(buffer)].push_back(headList.size());
         int num = relationMapping[(string)(buffer)];
         int len = 0, lefnum = 0, rignum = 0;
         std::vector<int> tmpp;
         while (fscanf(f,"%s", buffer)==1) {
             std::string con = buffer;
-            if (con=="###END###") break;
+            if (con=="。") break;
             int gg = wordMapping[con];
             if (con == head_s) lefnum = len;
             if (con == tail_s) rignum = len;
@@ -167,6 +186,8 @@ void init() {
         }
         headList.push_back(head);
         tailList.push_back(tail);
+        headLists.push_back(head_s);//增加部分
+        tailLists.push_back(tail_s);//增加部分
         relationList.push_back(num);
         trainLength.push_back(len);
         ldist.push_back(lefnum);
@@ -193,25 +214,26 @@ void init() {
     }
     fclose(f);
 
-    f = fopen("../NYT_data/computer_train.txt", "r");
+    f = fopen("../NYT_data/computer_test.txt", "r");
     while (fscanf(f,"%s",buffer)==1)  {
         string e1 = buffer;
         fscanf(f,"%s",buffer);
         string e2 = buffer;
-        bags_test[e1+"\t"+e2].push_back(testheadList.size());
         fscanf(f,"%s",buffer);
+        bags_test[e1+"\t"+e2+"\t"+(string)(buffer)].push_back(testheadLists.size());//改
         string head_s = (string)(buffer);
         int head = wordMapping[(string)(buffer)];
         fscanf(f,"%s",buffer);
-        string tail_s = (string)(buffer);
         int tail = wordMapping[(string)(buffer)];
+        string tail_s = (string)(buffer);
         fscanf(f,"%s",buffer);
         int num = relationMapping[(string)(buffer)];
         int len = 0 , lefnum = 0, rignum = 0;
         std::vector<int> tmpp;
         while (fscanf(f,"%s", buffer)==1) {
+
             std::string con = buffer;
-            if (con=="###END###") break;
+            if (con=="。") break;
             int gg = wordMapping[con];
             if (head_s == con) lefnum = len;
             if (tail_s == con) rignum = len;
@@ -288,17 +310,17 @@ void init() {
     for (it = bags_train.begin(); it != bags_train.end(); it++ )
     {
         string bagname = it->first;
-        fout << bagname<<"\t";
         vector<int> indices = it->second;
         for(int i=0;i<indices.size();i++){
-            if(i != indices.size() -1){
-                fout << indices[i]<<",";
-            }else{
-                fout << indices[i];
-            }
-        }
-        fout <<"\n";
-        for(int i=0;i<indices.size();i++){
+            fout << bagname <<"\t";//对实体的产生有影响??
+            fout<< indices[i];
+//            if(i != indices.size() -1){
+//                fout << indices[i]<<",";
+//            }else{
+//                fout << indices[i];
+//            }
+
+            fout <<"\n";
             int len = trainLength[indices[i]];
             fout <<headList[indices[i]]<<","<<tailList[indices[i]]<<","<<ldist[indices[i]]<<","<<rdist[indices[i]]<<","<<relationList[indices[i]]<<","<<trainLength[indices[i]]<<"\n";
             int *work1 = trainLists[indices[i]];
@@ -337,19 +359,19 @@ void init() {
     for (it = bags_test.begin(); it != bags_test.end(); it++ )
     {
         string bagname = it->first;
-        fout << bagname<<"\t";
         vector<int> indices = it->second;
         for(int i=0;i<indices.size();i++){
-            if(i != indices.size() -1){
-                fout << indices[i]<<",";
-            }else{
-                fout << indices[i];
-            }
-        }
-        fout <<"\n";
-        for(int i=0;i<indices.size();i++){
+            fout << bagname <<"\t";
+            fout<< indices[i];
+//            if(i != indices.size() -1){
+//                fout << indices[i]<<",";
+//            }else{
+//                fout << indices[i];
+//            }
+
+            fout <<"\n";
             int len = testtrainLength[indices[i]];
-            fout << testheadLists[indices[i]]<<","<<testtailLists[indices[i]]<<","<<testldist[indices[i]]<<","<<testrdist[indices[i]]<<","<<testrelationList[indices[i]]<<","<<testtrainLength[indices[i]]<<"\n";
+            fout << testheadList[indices[i]]<<","<<testtailList[indices[i]]<<","<<testldist[indices[i]]<<","<<testrdist[indices[i]]<<","<<testrelationList[indices[i]]<<","<<testtrainLength[indices[i]]<<"\n";
             int *work1 = testtrainLists[indices[i]];
             for (int j=0; j<len; j++){
                 if(j!=len-1){
@@ -383,10 +405,11 @@ void init() {
   	}
   	fout.close();
 }
-   
+
 int main(int argc, char ** argv) {
 	cout<<"Init Begin."<<endl;
 	init();
 	cout<<"Init End."<<endl;
 }
+
 
